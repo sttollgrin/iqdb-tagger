@@ -21,7 +21,7 @@ class IQDBService {
     public static final Integer DEFAULT_SCALE_MAX_PX_SIZE = 100
     public static final String DEFAULT_SERVICE_ADDRESS = 'http://iqdb.org/'
     // FIXME the commented out are either useless or require authentication - add authentication option
-    public static final List<Integer> DEFAULT_SERVICES = [1, 2, 3, 4, 5, 6, /*10,*/ /*11,*/ 12/*, 13*/]
+    public static final List<Integer> DEFAULT_SERVICES = [1, 2, 3, 4, 5, 6, /*10, 11, 12, 13*/]
 
     private final String serviceAddress
     private final int scaleMaxSize
@@ -49,8 +49,7 @@ class IQDBService {
                         'User-Agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
                 ]
         ) { HttpResponseDecorator resp ->
-            def ret = processResponse(resp, similarityThreshold)
-            ret
+            processResponse(resp, similarityThreshold)
         }
     }
 
@@ -62,6 +61,7 @@ class IQDBService {
         def imageContainers = root.'**'.findAll {
             it instanceof Node && 'td'.equals(it.name()) && 'image'.equals(it.'@class') && it.a[0] != null
         }
+        // usually happens when iqdb is down for maintenance - no point in continuing to tag...
         assert !imageContainers.isEmpty()
 
         // FIXME try to use iqdb provided (as an img.@alt attribute) tags
@@ -193,7 +193,7 @@ class IQDBService {
                 it instanceof Node && 'ul'.equals(it.name()) && 'tag-sidebar'.equals(it.@id)
             }
             transformNamespaces(tagSidebar.li.collect {
-                "${it.@class.toString()}:${it.a[1].value()[0]}"
+                "${it.@class.toString()}:${it.a[-1].value()[0]}"
             })
         }, { [] })
     }
@@ -228,7 +228,7 @@ class IQDBService {
             if (ex instanceof HttpResponseException && ex.statusCode == 429) {
                 if (!failOnTooManyRequests) { // received 429 Too Many Requests, wait 1-6s and try again
                     sleep(1000 + new Random().nextInt(5000))
-                    httpRequest(url, onSuccess, onFailure, true)
+                    return httpRequest(url, onSuccess, onFailure, true)
                 } else { // tag the file so I know the tags couldn't be downloaded due to 429
                     return ['sys_429:' + url]
                 }

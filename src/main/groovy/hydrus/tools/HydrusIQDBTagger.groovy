@@ -32,7 +32,7 @@ class HydrusIQDBTagger {
 
     public void startTagging() {
         //iqdb = new IQDBService('http://iqdb.harry.lu/', [])
-        db.sql.eachRow('SELECT h.hash_id, h.hash, f.mime FROM files_info f JOIN hashes h ON f.hash_id = h.hash_id WHERE f.hash_id NOT IN (SELECT DISTINCT hash_id FROM mappings)') { row ->
+        db.sql.eachRow('SELECT h.hash_id, h.hash, f.mime FROM files_info f JOIN hashes h ON f.hash_id = h.hash_id WHERE (SELECT COUNT(*) FROM mappings WHERE hash_id = f.hash_id) < 10 AND (SELECT COUNT(*) FROM mappings WHERE hash_id = f.hash_id AND tag_id IN (SELECT tt.tag_id FROM existing_tags et JOIN tags tt ON et.tag_id = tt.tag_id JOIN namespaces ns ON ns.namespace_id = et.namespace_id WHERE (tt.tag=\'tagme\' AND ns.namespace=\'sys\') OR (tt.tag=\'autotagged\' AND ns.namespace=\'sys\'))) = 0') { row ->
             //db.sql.eachRow('SELECT h.hash_id, h.hash, f.mime FROM files_info f JOIN hashes h ON f.hash_id = h.hash_id WHERE f.hash_id IN (SELECT DISTINCT m.hash_id FROM mappings m JOIN tags t ON t.tag_id = m.tag_id JOIN existing_tags e ON t.tag_id = e.tag_id JOIN namespaces n ON e.namespace_id = n.namespace_id WHERE t.tag = \'e621\' AND namespace = \'sys\');') { row ->
             def unique = []
             int applied = 0
